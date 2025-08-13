@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Driver Staff Lookup</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#ffffff">
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    body { margin: 0; padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom); }
+    header { position: sticky; top: 0; background: #fff; padding: 12px 0 8px; border-bottom: 1px solid #eee; }
+    h1 { font-size: 1.1rem; margin: 0 0 8px; font-weight: 600; }
+    .bar { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+    input[type="search"] { flex: 1; font-size: 1rem; padding: 12px 14px; border-radius: 12px; border: 1px solid #ddd; }
+    button { border: 0; background: #f3f3f3; padding: 10px 12px; border-radius: 10px; font-size: 0.9rem; }
+    .meta { font-size: 0.8rem; color: #666; margin: 8px 2px 12px; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid #eee; }
+    .name { font-weight: 600; }
+    .num { font-variant-numeric: tabular-nums; color: #333; }
+    .icon-btn { padding: 8px 10px; }
+    .empty { padding: 24px 12px; color: #666; }
+    .footer { padding: 16px 8px; font-size: 0.8rem; color: #777; text-align: center; }
+    dialog { border: none; border-radius: 14px; padding: 0; }
+    .modal { padding: 16px; min-width: min(520px, 92vw); }
+    .row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; margin: 10px 0; align-items: center; }
+    .row input { padding: 10px 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%; }
+    .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+    .toolbar { display: flex; gap: 8px; overflow: auto; padding: 8px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Driver Staff Lookup</h1>
+    <div class="bar">
+      <input id="q" type="search" placeholder="Search by name or number…" autocomplete="off">
+      <button id="addBtn" aria-label="Add">Add</button>
+      <button id="menuBtn" aria-label="More">More ▾</button>
+    </div>
+    <div class="toolbar" id="menu" hidden>
+      <button id="exportBtn">Export JSON</button>
+      <button id="importBtn">Import JSON</button>
+      <button id="resetBtn">Reset to Original</button>
+    </div>
+    <div class="meta"><span id="count"></span> drivers • works offline • changes saved on this device</div>
+  </header>
+
+  <main>
+    <ul id="list" role="list"></ul>
+    <div id="empty" class="empty" hidden>No matches.</div>
+  </main>
+
+  <div class="footer">Tip: Add to Home Screen on iPhone for fastest access.</div>
+
+  <dialog id="editDlg">
+    <form method="dialog" class="modal">
+      <h3 id="dlgTitle">Add Driver</h3>
+      <div class="row"><label for="name">Name</label><input id="name" required></div>
+      <div class="row"><label for="number">Staff No.</label><input id="number" inputmode="numeric" pattern="\d+" required></div>
+      <div class="actions">
+        <button value="cancel">Cancel</button>
+        <button id="saveBtn" value="default">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input id="fileInput" type="file" accept="application/json" hidden />
+
+  <script>
+    if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js')); }
+
+    const EMBED = [{"name": "Adam Scanlon", "number": "497584"}, {"name": "Adrian Kerrigan", "number": "616303"}, {"name": "Aidan Browne", "number": "845809"}, {"name": "Aidan O'Brien", "number": "617301"}, {"name": "Aidan Ridgeway", "number": "679471"}, {"name": "Aisling O'Leary", "number": "847674"}, {"name": "Alan O'Flynn", "number": "620807"}, {"name": "Andrew Cosgrave", "number": "836974"}, {"name": "Bart Nowaczek", "number": "738867"}, {"name": "Bernard Considine", "number": "678864"}, {"name": "Brendan O'Callaghan", "number": "358037"}, {"name": "Brian Wakefield", "number": "672807"}, {"name": "Bryan Jordan", "number": "794325"}, {"name": "Chloe Reddan", "number": "845574"}, {"name": "Chris Gould", "number": "618306"}, {"name": "Christopher Harris", "number": "737143"}, {"name": "Conor Flanagan", "number": "497568"}, {"name": "Conor Murphy", "number": "678392"}, {"name": "Damien Hegarty", "number": "618594"}, {"name": "Damien O'Leary", "number": "617032"}, {"name": "Damien O'Regan", "number": "446580"}, {"name": "Denis McCarthy", "number": "676977"}, {"name": "Denis O'Leary", "number": "354996"}, {"name": "Derek Fenlon", "number": "678791"}, {"name": "Dermot Coady", "number": "617849"}, {"name": "Desmond O'Leary", "number": "508391"}, {"name": "Edward Dean", "number": "843857"}, {"name": "Erik O'Regan", "number": "619035"}, {"name": "Fiona Walsh", "number": "843849"}, {"name": "Gary Moore", "number": "845566"}, {"name": "Gavin Brett", "number": "617326"}, {"name": "Gavin Delaney", "number": "737968"}, {"name": "Gerard Nawra", "number": "738875"}, {"name": "Greg Ahern", "number": "738905"}, {"name": "Humphrey Allen", "number": "737151"}, {"name": "Ian Clarke", "number": "615099"}, {"name": "Jack O'Riordan", "number": "847704"}, {"name": "James Moore", "number": "618292"}, {"name": "Jer Murphy", "number": "677248"}, {"name": "Jim Leahy", "number": "676837"}, {"name": "Joe Byrne", "number": "678902"}, {"name": "Joe Stack", "number": "617660"}, {"name": "John Buttimer", "number": "122238"}, {"name": "John Duggan", "number": "622222"}, {"name": "John Goggin", "number": "622486"}, {"name": "Jonathan Boyd", "number": "619469"}, {"name": "Jonathan Deasy", "number": "129720"}, {"name": "Jonathan Dennehy", "number": "737951"}, {"name": "Jonathan Hallihan", "number": "618969"}, {"name": "Keith McNamara", "number": "622206"}, {"name": "Ken Fox", "number": "677094"}, {"name": "Kieran Brett", "number": "678872"}, {"name": "Kieran Cotter", "number": "677434"}, {"name": "Kieran Hegarty", "number": "128619"}, {"name": "Konrad Michalski", "number": "846325"}, {"name": "Kyle O'Donovan", "number": "845817"}, {"name": "Liam Cotter", "number": "677124"}, {"name": "Liam Martin", "number": "620831"}, {"name": "Liam Mulcahy", "number": "620440"}, {"name": "Mark Dineen", "number": "453341"}, {"name": "Martin Cotter", "number": "677167"}, {"name": "Martin Dawe", "number": "621481"}, {"name": "Matthew Ryan", "number": "453374"}, {"name": "Michael Lane", "number": "447651"}, {"name": "Niall McCarthy", "number": "618535"}, {"name": "Noel Kelleher", "number": "621242"}, {"name": "Pat Finnegan", "number": "619108"}, {"name": "Paul Egan", "number": "618527"}, {"name": "Robbie Walsh", "number": "845541"}, {"name": "Roy Galvin", "number": "678732"}, {"name": "Roy O'Sullivan", "number": "843830"}, {"name": "Se n Cullinane", "number": "351725"}, {"name": "Se n Kiely", "number": "846279"}, {"name": "Shane Brohier", "number": "617741"}, {"name": "Shane Kenny", "number": "496121"}, {"name": "Stephen Healy", "number": "353108"}, {"name": "Stephen Timoney", "number": "738883"}, {"name": "Steve Fitzcarlos", "number": "847690"}, {"name": "Terry White", "number": "619061"}, {"name": "Testing", "number": "768900"}, {"name": "Thomas Gardiner", "number": "678074"}, {"name": "Thomas Gordaneer", "number": "845949"}, {"name": "Tim O'Leary", "number": "618012"}, {"name": "Tom Allen", "number": "619000"}, {"name": "Tom Loughnane", "number": "732737"}, {"name": "Tom O'Mahony", "number": "618098"}, {"name": "Tony Buckley", "number": "676918"}, {"name": "Tony Cummins", "number": "616958"}, {"name": "William Hurley", "number": "678619"}];
+    const KEY = 'driver_staff_lookup_v2';
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return [...EMBED];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [...EMBED];
+        return parsed;
+      } catch (_) { return [...EMBED]; }
+    }
+    function save(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
+
+    let DATA = load().sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+
+    const list = document.getElementById('list');
+    const q = document.getElementById('q');
+    const empty = document.getElementById('empty');
+    const count = document.getElementById('count');
+    const addBtn = document.getElementById('addBtn');
+    const menuBtn = document.getElementById('menuBtn');
+    const menu = document.getElementById('menu');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const editDlg = document.getElementById('editDlg');
+    const fileInput = document.getElementById('fileInput');
+
+    const nameInp = document.getElementById('name');
+    const numInp = document.getElementById('number');
+    const dlgTitle = document.getElementById('dlgTitle');
+
+    count.textContent = DATA.length;
+
+    function normalize(s) { return (s||'').toLowerCase().normalize('NFKD').replace(/\p{Diacritic}/gu, ''); }
+
+    function render(items) {
+      list.innerHTML = '';
+      items.forEach((('Testing', '768900'), idx) => {
+        const li = document.createElement('li');
+        const left = document.createElement('div');
+        left.innerHTML = `<div class="name">${name}</div><div class="num">${number}</div>`;
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'icon-btn';
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(number); copyBtn.textContent='Copied'; setTimeout(()=>copyBtn.textContent='Copy', 1200); }
+          catch { alert('Could not copy'); }
+        });
+
+        const moreBtn = document.createElement('button');
+        moreBtn.className = 'icon-btn';
+        moreBtn.textContent = 'Edit';
+        moreBtn.addEventListener('click', () => editEntry(idx));
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'icon-btn';
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', () => deleteEntry(idx));
+
+        li.appendChild(left);
+        li.appendChild(copyBtn);
+        li.appendChild(moreBtn);
+        li.appendChild(delBtn);
+        list.appendChild(li);
+      });
+      empty.hidden = items.length !== 0;
+    }
+
+    function search() {
+      const term = normalize(q.value.trim());
+      if (!term) return render(DATA);
+      const parts = term.split(/\s+/).filter(Boolean);
+      const res = DATA.filter((('Testing', '768900')) => {
+        const hay = normalize(name) + ' ' + String(number);
+        return parts.every(p => hay.includes(p));
+      });
+      render(res);
+    }
+
+    function openAdd() {
+      dlgTitle.textContent = 'Add Driver';
+      nameInp.value = '';
+      numInp.value = '';
+      editDlg.showModal();
+      editDlg.onclose = () => {};
+      editDlg.addEventListener('close', onDialogClose, {once:true});
+    }
+
+    function editEntry(idx) {
+      const item = DATA[idx];
+      dlgTitle.textContent = 'Edit Driver';
+      nameInp.value = item.name;
+      numInp.value = item.number;
+      editDlg.showModal();
+      editDlg.addEventListener('close', () => onDialogClose(idx), {once:true});
+    }
+
+    function onDialogClose(idx) {
+      if (editDlg.returnValue === 'cancel') return;
+      const n = nameInp.value.trim();
+      const no = numInp.value.trim();
+      if (!n || !/^\d+$/.test(no)) return;
+      if (idx == null) { // add
+        DATA.push({name:n, number:no});
+      } else { // update
+        DATA[idx] = {name:n, number:no};
+      }
+      DATA.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+      save(DATA);
+      count.textContent = DATA.length;
+      search();
+    }
+
+    function deleteEntry(idx) {
+      const item = DATA[idx];
+      if (!confirm(`Delete ${item.name}?`)) return;
+      DATA.splice(idx,1);
+      save(DATA);
+      count.textContent = DATA.length;
+      search();
+    }
+
+    q.addEventListener('input', search);
+    addBtn.addEventListener('click', openAdd);
+    menuBtn.addEventListener('click', () => menu.hidden = !menu.hidden);
+
+    exportBtn.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(DATA, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'driver-staff-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    importBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const arr = JSON.parse(text);
+        if (!Array.isArray(arr)) throw new Error('Invalid file');
+        const cleaned = arr.map(x => ({name:String(x.name||'').trim(), number:String(x.number||'').trim()}))
+                          .filter(x => x.name && /^\d+$/.test(x.number));
+        if (!cleaned.length) throw new Error('No valid entries');
+        DATA = cleaned.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+        save(DATA);
+        count.textContent = DATA.length;
+        q.value = '';
+        render(DATA);
+        alert('Import successful.');
+      } catch (e) {
+        alert('Import failed: ' + e.message);
+      } finally {
+        fileInput.value = '';
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (!confirm('Reset your local changes and reload the original list?')) return;
+      DATA = [...EMBED].sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+      save(DATA);
+      q.value = '';
+      count.textContent = DATA.length;
+      render(DATA);
+    });
+
+    // Initial render
+    render(DATA);
+  </script>
+</body>
+</html>
