@@ -74,16 +74,11 @@
     if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js')); }
 
     const EMBED = [{"name": "Adam Scanlon", "number": "497584"}, {"name": "Adrian Kerrigan", "number": "616303"}, {"name": "Aidan Browne", "number": "845809"}, {"name": "Aidan O'Brien", "number": "617301"}, {"name": "Aidan Ridgeway", "number": "679471"}, {"name": "Aisling O'Leary", "number": "847674"}, {"name": "Alan O'Flynn", "number": "620807"}, {"name": "Andrew Cosgrave", "number": "836974"}, {"name": "Bart Nowaczek", "number": "738867"}, {"name": "Bernard Considine", "number": "678864"}, {"name": "Brendan O'Callaghan", "number": "358037"}, {"name": "Brian Wakefield", "number": "672807"}, {"name": "Bryan Jordan", "number": "794325"}, {"name": "Chloe Reddan", "number": "845574"}, {"name": "Chris Gould", "number": "618306"}, {"name": "Christopher Harris", "number": "737143"}, {"name": "Conor Flanagan", "number": "497568"}, {"name": "Conor Murphy", "number": "678392"}, {"name": "Damien Hegarty", "number": "618594"}, {"name": "Damien O'Leary", "number": "617032"}, {"name": "Damien O'Regan", "number": "446580"}, {"name": "Denis McCarthy", "number": "676977"}, {"name": "Denis O'Leary", "number": "354996"}, {"name": "Derek Fenlon", "number": "678791"}, {"name": "Dermot Coady", "number": "617849"}, {"name": "Desmond O'Leary", "number": "508391"}, {"name": "Edward Dean", "number": "843857"}, {"name": "Erik O'Regan", "number": "619035"}, {"name": "Fiona Walsh", "number": "843849"}, {"name": "Gary Moore", "number": "845566"}, {"name": "Gavin Brett", "number": "617326"}, {"name": "Gavin Delaney", "number": "737968"}, {"name": "Gerard Nawra", "number": "738875"}, {"name": "Greg Ahern", "number": "738905"}, {"name": "Humphrey Allen", "number": "737151"}, {"name": "Ian Clarke", "number": "615099"}, {"name": "Jack O'Riordan", "number": "847704"}, {"name": "James Moore", "number": "618292"}, {"name": "Jer Murphy", "number": "677248"}, {"name": "Jim Leahy", "number": "676837"}, {"name": "Joe Byrne", "number": "678902"}, {"name": "Joe Stack", "number": "617660"}, {"name": "John Buttimer", "number": "122238"}, {"name": "John Duggan", "number": "622222"}, {"name": "John Goggin", "number": "622486"}, {"name": "Jonathan Boyd", "number": "619469"}, {"name": "Jonathan Deasy", "number": "129720"}, {"name": "Jonathan Dennehy", "number": "737951"}, {"name": "Jonathan Hallihan", "number": "618969"}, {"name": "Keith McNamara", "number": "622206"}, {"name": "Ken Fox", "number": "677094"}, {"name": "Kieran Brett", "number": "678872"}, {"name": "Kieran Cotter", "number": "677434"}, {"name": "Kieran Hegarty", "number": "128619"}, {"name": "Konrad Michalski", "number": "846325"}, {"name": "Kyle O'Donovan", "number": "845817"}, {"name": "Liam Cotter", "number": "677124"}, {"name": "Liam Martin", "number": "620831"}, {"name": "Liam Mulcahy", "number": "620440"}, {"name": "Mark Dineen", "number": "453341"}, {"name": "Martin Cotter", "number": "677167"}, {"name": "Martin Dawe", "number": "621481"}, {"name": "Matthew Ryan", "number": "453374"}, {"name": "Michael Lane", "number": "447651"}, {"name": "Niall McCarthy", "number": "618535"}, {"name": "Noel Kelleher", "number": "621242"}, {"name": "Pat Finnegan", "number": "619108"}, {"name": "Paul Egan", "number": "618527"}, {"name": "Robbie Walsh", "number": "845541"}, {"name": "Roy Galvin", "number": "678732"}, {"name": "Roy O'Sullivan", "number": "843830"}, {"name": "Se n Cullinane", "number": "351725"}, {"name": "Se n Kiely", "number": "846279"}, {"name": "Shane Brohier", "number": "617741"}, {"name": "Shane Kenny", "number": "496121"}, {"name": "Stephen Healy", "number": "353108"}, {"name": "Stephen Timoney", "number": "738883"}, {"name": "Steve Fitzcarlos", "number": "847690"}, {"name": "Terry White", "number": "619061"}, {"name": "Testing", "number": "768900"}, {"name": "Thomas Gardiner", "number": "678074"}, {"name": "Thomas Gordaneer", "number": "845949"}, {"name": "Tim O'Leary", "number": "618012"}, {"name": "Tom Allen", "number": "619000"}, {"name": "Tom Loughnane", "number": "732737"}, {"name": "Tom O'Mahony", "number": "618098"}, {"name": "Tony Buckley", "number": "676918"}, {"name": "Tony Cummins", "number": "616958"}, {"name": "William Hurley", "number": "678619"}];
-    const KEY = 'driver_staff_lookup_v2';
+    const KEY = 'driver_staff_lookup_v2c';
 
     function load() {
-      try {
-        const raw = localStorage.getItem(KEY);
-        if (!raw) return [...EMBED];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [...EMBED];
-        return parsed;
-      } catch (_) { return [...EMBED]; }
+      try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : [...EMBED]; }
+      catch { return [...EMBED]; }
     }
     function save(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
 
@@ -108,14 +103,16 @@
 
     count.textContent = DATA.length;
 
-    function normalize(s) { return (s||'').toLowerCase().normalize('NFKD').replace(/\p{Diacritic}/gu, ''); }
+    function normalize(s) {
+      return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
 
     function render(items) {
       list.innerHTML = '';
-      items.forEach((('Testing', '768900'), idx) => {
+      items.forEach(({name, number}, idx) => {
         const li = document.createElement('li');
         const left = document.createElement('div');
-        left.innerHTML = `<div class="name">${name}</div><div class="num">${number}</div>`;
+        left.innerHTML = `<div class="name">\${name}</div><div class="num">\${number}</div>`;
 
         const copyBtn = document.createElement('button');
         copyBtn.className = 'icon-btn';
@@ -148,29 +145,48 @@
       const term = normalize(q.value.trim());
       if (!term) return render(DATA);
       const parts = term.split(/\s+/).filter(Boolean);
-      const res = DATA.filter((('Testing', '768900')) => {
+      const res = DATA.filter(({name, number}) => {
         const hay = normalize(name) + ' ' + String(number);
         return parts.every(p => hay.includes(p));
       });
       render(res);
     }
 
+    function supportsDialog() { return typeof HTMLDialogElement !== 'undefined' && typeof editDlg.showModal === 'function'; }
+
     function openAdd() {
-      dlgTitle.textContent = 'Add Driver';
-      nameInp.value = '';
-      numInp.value = '';
-      editDlg.showModal();
-      editDlg.onclose = () => {};
-      editDlg.addEventListener('close', onDialogClose, {once:true});
+      if (supportsDialog()) {
+        dlgTitle.textContent = 'Add Driver';
+        nameInp.value = '';
+        numInp.value = '';
+        editDlg.showModal();
+        editDlg.addEventListener('close', onDialogClose, {once:true});
+      } else {
+        const n = prompt('Name'); if (n == null) return;
+        const no = prompt('Staff No.'); if (no == null) return;
+        if (!/^\d+$/.test(no.trim()) || !n.trim()) return;
+        DATA.push({name:n.trim(), number:no.trim()});
+        DATA.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+        save(DATA); count.textContent = DATA.length; search();
+      }
     }
 
     function editEntry(idx) {
       const item = DATA[idx];
-      dlgTitle.textContent = 'Edit Driver';
-      nameInp.value = item.name;
-      numInp.value = item.number;
-      editDlg.showModal();
-      editDlg.addEventListener('close', () => onDialogClose(idx), {once:true});
+      if (supportsDialog()) {
+        dlgTitle.textContent = 'Edit Driver';
+        nameInp.value = item.name;
+        numInp.value = item.number;
+        editDlg.showModal();
+        editDlg.addEventListener('close', () => onDialogClose(idx), {once:true});
+      } else {
+        const n = prompt('Edit name', item.name); if (n == null) return;
+        const no = prompt('Edit staff no.', item.number); if (no == null) return;
+        if (!/^\d+$/.test(no.trim()) || !n.trim()) return;
+        DATA[idx] = {name:n.trim(), number:no.trim()};
+        DATA.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+        save(DATA); count.textContent = DATA.length; search();
+      }
     }
 
     function onDialogClose(idx) {
@@ -178,11 +194,8 @@
       const n = nameInp.value.trim();
       const no = numInp.value.trim();
       if (!n || !/^\d+$/.test(no)) return;
-      if (idx == null) { // add
-        DATA.push({name:n, number:no});
-      } else { // update
-        DATA[idx] = {name:n, number:no};
-      }
+      if (idx == null) { DATA.push({name:n, number:no}); }
+      else { DATA[idx] = {name:n, number:no}; }
       DATA.sort((a,b)=>a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
       save(DATA);
       count.textContent = DATA.length;
@@ -191,7 +204,7 @@
 
     function deleteEntry(idx) {
       const item = DATA[idx];
-      if (!confirm(`Delete ${item.name}?`)) return;
+      if (!confirm(`Delete \${item.name}?`)) return;
       DATA.splice(idx,1);
       save(DATA);
       count.textContent = DATA.length;
@@ -245,7 +258,6 @@
       render(DATA);
     });
 
-    // Initial render
     render(DATA);
   </script>
 </body>
